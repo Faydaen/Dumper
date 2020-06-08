@@ -1,0 +1,21 @@
+{
+    "name": "faydaen/dumper",
+    "license": "MIT",
+    "description": "Replacement of standard var_dump function",
+    "authors": [
+        {
+            "name": "Faydaen",
+            "email": "panov.eo@gmail.com"
+        }
+    ],
+    "require": {},
+    "require-dev": {
+        "phpunit/phpunit": "^9"
+    },
+    "autoload": {
+        "classmap": [
+            "src"
+        ],
+        "files": ["src/functions.php"]
+    }
+}
