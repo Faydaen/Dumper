@@ -1,24 +1,17 @@
 # Dumper
-
 Dumps information about a variable. Replacement of standard var_dump function
 
-## Install
+## Installation
+Install the package through [Composer](https://getcomposer.org/).
 
-
+Run the Composer require command from the Terminal:  
 ```
-composer require faydaen/dumper
-```
-
-**OR**  
-
-Add this to require-dev section in your composer.json
+composer require faydaen/dumper --dev
 ```
 
-```
 ## Usage and samples
 
 ### Dump scalar variables
-
 Dump string
 ```php
 dd('hello');
@@ -45,7 +38,6 @@ dd(null);
 ```
 
 ### Dump arrays and objects
-
 Dump empty array
 ```php
 dd([]);
@@ -64,6 +56,16 @@ dd(['planet'=>'Mars', 'hasAtmosphere'=>true, 'satellites'=>2]);
 
 Dump object
 ```php
-dd($user);
-```
+    class User {
+        public $name;
+        public $age;
+        protected $someProtectedField;
 
+        public function __construct (){
+            $this->name = 'John Doe';
+            $this->age = 32;
+        }
+    }
+    // will be shown only public fields
+    dd(new User());
+```

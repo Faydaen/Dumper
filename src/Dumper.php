@@ -2,293 +2,305 @@
 
 namespace Faydaen;
 
+use Faydaen\Renderers\WebRenderer;
+
 class Dumper
 {
+    const CLASS_NAME_DEEP = 3;
+
     private $tabs = 0;
-    const NUMERIC_COLOR = '#0000FF';
-    const STRING_COLOR = '#D67F1D';
-    const BOOL_COLOR = '#C04E19';
-    const NULL_COLOR = '#C04E19';
 
-    private $arrayItem;
-    private $deep = 0;
+    private $value;
 
-    const CLASS_NAME_DEEP = 1;
+    private $key = null;
 
-    private static function color_print($sting, $color)
+    private $separator = null;
+
+    private $bracket = null;
+
+    private $signOnEnd = null;
+
+    private $map = [];
+    const ITERATION_TYPE_SCALAR = 'scalar';
+    const ITERATION_TYPE_ARRAY = 'array';
+    const ITERATION_TYPE_OBJECT = 'object';
+
+    /**
+     * @var Line[]
+     */
+    private $lines;
+
+    public function dump($entity, $comment = '')
     {
-        return '<span style="color: ' . $color . '">' . $sting . '</span>';
+        $this->putValue($entity);
+        $renderer = new WebRenderer($this->lines, $comment);
+        echo $renderer->render();
     }
 
-    public function is_flat_array($array)
+    private function putValue($entity)
     {
-        return array_keys($array) === range(0, count($array) - 1);
-    }
-
-    private function print_empty_array()
-    {
-        echo '[ ]';
-    }
-
-    private function print_normal_array($entity)
-    {
-        $this->arrayItem = true;
-        $count = count($entity);
-        $i = 0;
-        $this->deep++;
-
-        $isFlat = $this->is_flat_array($entity);
-
-        echo '[';
-        echo '<br>' . PHP_EOL;
-        $this->tabs++;
-
-        foreach ($entity as $key => $value) {
-            echo $this->tabs();
-            if (!$isFlat) {
-                if (is_numeric($key)) {
-                    echo self::color_print($key, self::NUMERIC_COLOR);
-                } else {
-                    echo self::color_print("'" . $key . "'", self::STRING_COLOR);
-                }
-                echo ' => ';
-            }
-
-            $this->p($value);
-            $i++;
-            $this->print_comma($i, $count);
-            echo '<br>' . PHP_EOL;
-        }
-        $this->tabs--;
-        $this->deep--;
-        echo $this->tabs();
-        echo ']';
-    }
-
-    public function print_comma($i, $count)
-    {
-        if ($i < $count) {
-            if ($this->arrayItem) {
-                echo ',';
-            }
-        }
-    }
-
-    public function print_array($entity)
-    {
-        if (empty($entity)) {
-            $this->print_empty_array();
+        if ($this->isScalar($entity)) {
+            $this->value = $this->getScalarType($entity);
+            $this->putLine(self::ITERATION_TYPE_SCALAR);
         } else {
-            $this->print_normal_array($entity);
-            echo PHP_EOL;
+            switch (TypeRecogniser::recognizeType($entity)) {
+                case TypeRecogniser::TYPE_FLAT_ARRAY:
+                    $this->createFlatArrayType($entity);
+                    break;
+                case TypeRecogniser::TYPE_ASSOCIATES_ARRAY:
+                    $this->createAssociatesArrayType($entity);
+                    break;
+                case TypeRecogniser::TYPE_OBJECT:
+                    if ($this->tabs < self::CLASS_NAME_DEEP) {
+                        $this->createObjectType($entity);
+                    }
+                    else {
+                        $this->value = $this->createClassName($entity);
+                        $this->putLine(self::ITERATION_TYPE_SCALAR);
+                    }
+                    break;
+                case TypeRecogniser::TYPE_YII_MODEL:
+                    $this->createObjectType($entity,true);
+                    break;
+            }
         }
     }
 
-    public function print_class_name($entity)
-    {
-        echo get_class($entity);
+    private function putLine($iterationType = null) {
+        if (!is_null($iterationType)) {
+            $this->map[$this->tabs] = $iterationType;
+        }
+
+        $this->lines[] = new Line(
+            $this->tabs,
+            $this->key,
+            $this->separator,
+            $this->value,
+            $this->bracket,
+            $this->signOnEnd
+        );
     }
 
-    public function print_class($entity)
+    private function getScalarType($entity)
     {
-        if ($this->deep <= self::CLASS_NAME_DEEP) {
-            $this->print_deep_class($entity);
+        switch (TypeRecogniser::recognizeType($entity)) {
+            case TypeRecogniser::TYPE_NULL:
+                return $this->createNullType();
+
+            case TypeRecogniser::TYPE_INTEGER:
+                return $this->createIntegerType($entity);
+
+            case TypeRecogniser::TYPE_DOUBLE:
+                return $this->createDoubleType($entity);
+
+            case TypeRecogniser::TYPE_STRING:
+                return $this->createStringType($entity);
+
+            case TypeRecogniser::TYPE_BOOL:
+                return $this->createBoolType($entity);
+
+            case TypeRecogniser::TYPE_EMPTY_ARRAY:
+                return $this->createEmptyArrayType();
+
+            case  TypeRecogniser::TYPE_QUERY_COMMAND:
+                return $this->createQueryCommandType($entity);
+
+            case  TypeRecogniser::TYPE_QUERY:
+                return $this->createQueryType($entity);
+
+            default:
+                return $this->createTypeName($entity);
+        }
+    }
+
+    private function createAssociatesArrayType($array) {
+        $this->createArray($array, true);
+    }
+
+    private function createFlatArrayType($array){
+        $this->createArray($array, false);
+    }
+
+    private function createObjectType($object,$isModel = false) {
+        $this->value = $this->createClassName($object);
+        $this->bracket = new Subline(' {');
+        $this->signOnEnd = null;
+        $this->putLine(self::ITERATION_TYPE_OBJECT);
+        $this->bracket = null;
+
+        if ($isModel) {
+            $this->modelIteration($object);
         } else {
-            $this->print_class_name($entity);
+            $this->objectIteration($object);
         }
+
+        $this->key = null;
+        $this->separator = null;
+        $this->value = null;
+
+        $this->signOnEnd = $this->getFinaleSeparator();
+
+        $this->bracket = new Subline('}');
+        $this->putLine();
+        $this->bracket = null;
     }
 
-    public function print_deep_class($entity)
+    private function objectIteration($object)
     {
-        $this->deep++;
-        $this->print_class_name($entity);
-        echo ' ';
-
-        $this->arrayItem = true;
-        $count = count(get_object_vars($entity));
-        $i = 0;
-
-        echo '{';
-        echo '<br>' . PHP_EOL;
         $this->tabs++;
+        $this->map[$this->tabs] = self::ITERATION_TYPE_OBJECT;
 
-        foreach (get_object_vars($entity) as $key => $value) {
-            echo $this->tabs();
-            echo '$' . $key;
-            echo ' = ';
+        $counter = 0;
+        foreach ($object as $key => $value) {
 
-            $this->p($value);
-            $i++;
-            $this->print_comma($i, $count);
-            echo '<br>' . PHP_EOL;
+            $counter++;
+            $this->signOnEnd = new Subline(';');
+            $this->separator = new Subline(' = ');
+            $this->key = new Subline('$' . $key );
+
+            $this->putValue($value);
+
         }
         $this->tabs--;
-        $this->deep--;
-        echo $this->tabs();
-        echo '}';
     }
 
-    public function print_yii_model(\yii\base\Model $entity)
+    private function modelIteration($model)
     {
-        echo get_class($entity);
-        echo ': {';
-        echo '<br>' . PHP_EOL;
         $this->tabs++;
+        $this->map[$this->tabs] = self::ITERATION_TYPE_OBJECT;
 
-        foreach (get_object_vars($entity) as $key => $value) {
-            echo $this->tabs();
-            echo '$' . $key;
-            echo ' = ';
-            $this->p($value);
-            echo ',';
-            echo '<br>' . PHP_EOL;
+        $counter = 0;
+        foreach ($model->attributes() as $field) {
+
+            $counter++;
+            $this->signOnEnd = new Subline(';');
+            $this->separator = new Subline(' = ');
+            $this->key = new Subline('$' . $field );
+
+            $this->putValue($model->{$field});
+
+        }
+        $this->tabs--;
+    }
+
+    private function createArray($array, $isAssociative) {
+        $this->value = null;
+        $this->bracket = new Subline('[');
+        $this->signOnEnd = null;
+        $this->putLine(self::ITERATION_TYPE_ARRAY);
+        $this->bracket = null;
+
+        $this->arrayIteration($array, $isAssociative);
+
+        $this->key = null;
+        $this->signOnEnd = $this->getFinaleSeparator();
+
+        $this->separator = null;
+        $this->value = null;
+        $this->bracket = new Subline(']');
+        $this->putLine();
+        $this->bracket = null;
+    }
+
+    private function getFinaleSeparator() {
+        if ($this->tabs == 0){
+            return new Subline(';');
+        }
+        if($this->map[$this->tabs-1] == self::ITERATION_TYPE_ARRAY){
+            return new Subline(',');
+        }
+        if($this->map[$this->tabs-1] == self::ITERATION_TYPE_OBJECT){
+            return new Subline(';');
+        }
+        return null;
+    }
+
+    private function arrayIteration($array, $isAssociative){
+        $this->tabs++;
+        $this->map[$this->tabs] = self::ITERATION_TYPE_ARRAY;
+
+        if (!$isAssociative){
+            $this->separator = null;
+            $this->key = null;
         }
 
-        foreach ($entity->attributes() as $field) {
-            echo $this->tabs();
-            echo $field . ' => ';
-            $this->p($entity->{$field});
-            echo '<br>' . PHP_EOL;
+        $total = count($array);
+        $counter = 0;
+        foreach ($array as $key => $value) {
+            $counter++;
+
+            if ($isAssociative){
+                $this->separator = new Subline(' => ');
+                $this->key = $this->getScalarType($key);
+            }
+            $this->signOnEnd = ($total!=$counter) ? new Subline(',') : null;
+            $this->putValue($value);
         }
 
         $this->tabs--;
-        echo $this->tabs();
-        echo '}' . PHP_EOL;
     }
 
-    public function print_numeric($entity)
-    {
-
-
-        if (gettype($entity) === 'double'){
-            $entity = $entity . 'f';
-        }
-
-        echo self::color_print($entity, self::NUMERIC_COLOR);
+    private function createNullType() {
+        return new Subline('null', Line::COLOR_NULL);
     }
 
-    public function print_string($entity)
-    {
-
-
-
-        $entity = str_replace(' ', '&nbsp;', $entity);
-        $entity = str_replace("\t", '&nbsp;&nbsp;&nbsp;&nbsp;', $entity);
-
-        $string = "'" . $entity . "'";
-        echo self::color_print($string, self::STRING_COLOR);
+    private function createEmptyArrayType() {
+        return new Subline('[ ]', Line::COLOR_DEFAULT);
     }
 
-    public function print_bool($entity)
-    {
-        $string = $entity ? 'true' : 'false';
-        echo self::color_print($string, self::BOOL_COLOR);
+    private function createIntegerType($entity) {
+        return new Subline($entity, Line::COLOR_NUMERIC);
     }
 
-    public function print_null()
-    {
-        echo self::color_print('null', self::NULL_COLOR);
+    private function createDoubleType($entity) {
+        return new Subline($entity . 'f', Line::COLOR_NUMERIC);
     }
 
-    public function print_query(yii\db\ActiveQuery $entity)
-    {
-        $this->print_query_command($entity->createCommand());
+    private function createStringType($entity) {
+        $this->escapeQuotes($entity);
+        return new Subline("'" . $entity . "'", Line::COLOR_STRING);
     }
 
-    public function print_query_command(yii\db\Command $entity)
-    {
-        echo '<b>' . $entity->getRawSql() . '</b>';
+    private function createBoolType($entity) {
+        $bool = $entity ? 'true' : 'false';
+        return new Subline($bool, Line::COLOR_BOOL);
     }
 
-    public static function get_type($entity)
-    {
-        if (is_null($entity)) {
-            return 'null';
-        }
-
-        if (is_numeric($entity) && !is_string($entity)) {
-            return 'numeric';
-        }
-
-        if (is_string($entity)) {
-            return 'string';
-        }
-
-        if (is_bool($entity)) {
-            return 'bool';
-        }
-
-        if (is_array($entity)) {
-            return 'array';
-        }
-
-        if (is_object($entity)) {
-            if (is_a($entity, \yii\base\Model::class)) {
-                return 'yii_model';
-            }
-
-            if (is_a($entity, app\components\db\pgpdo\Command::class)) {
-                return 'query_command';
-            }
-
-            if (is_a($entity, \yii\db\QueryInterface::class)) {
-                return 'query';
-            }
-
-            return 'object';
-        }
-
-        return 'unknown';
+    private function createQueryCommandType($entity) {
+        $query = $entity->getRawSql();
+        return new Subline($query, Line::COLOR_SQL);
     }
 
-    private function tabs()
-    {
-        $tabs = '';
-        for ($i = 0; $i < $this->tabs; $i++) {
-            $tabs .= '&nbsp;&nbsp;&nbsp;&nbsp;';
-        }
-
-        return $tabs;
+    private function createQueryType($entity) {
+        $query = $entity->createCommand();
+        return $this->createQueryCommandType($query);
     }
 
-    public function p($entity, $comment = '')
-    {
-        if (!empty($comment)) {
-            echo '<b>' . $comment . '</b><br>';
-        }
+    private function createClassName($entity) {
+        return new Subline(get_class($entity).'::class', Line::COLOR_CLASS_NAME);
+    }
 
-        switch (self::get_type($entity)) {
-            case 'null':
-                $this->print_null();
-                break;
-            case 'numeric':
-                $this->print_numeric($entity);
-                break;
-            case 'string':
-                $this->print_string($entity);
-                break;
-            case 'bool':
-                $this->print_bool($entity);
-                break;
-            case 'array':
-                $this->print_array($entity);
-                break;
-            case 'yii_model':
-                $this->print_yii_model($entity);
-                break;
-            case 'query_command':
-                $this->print_query_command($entity);
-                break;
-            case 'query':
-                $this->print_query($entity);
-                break;
-            case 'object':
-                $this->print_class($entity);
-                break;
-            case 'unknown':
-                echo gettype($entity);
-                break;
-        }
+    private function createTypeName($entity) {
+        return new Subline(gettype($entity), Line::COLOR_UNKNOWN_TYPE);
+    }
+
+    private function isScalar($entity) {
+        return in_array(TypeRecogniser::recognizeType($entity), [
+            TypeRecogniser::TYPE_NULL,
+            TypeRecogniser::TYPE_INTEGER,
+            TypeRecogniser::TYPE_DOUBLE,
+            TypeRecogniser::TYPE_STRING,
+            TypeRecogniser::TYPE_BOOL,
+            TypeRecogniser::TYPE_EMPTY_ARRAY,
+            TypeRecogniser::TYPE_QUERY_COMMAND,
+            TypeRecogniser::TYPE_QUERY,
+            TypeRecogniser::TYPE_UNKNOWN,
+        ]);
+    }
+
+    private function escapeQuotes($string){
+        $string = str_replace(' ', '&nbsp;', $string);
+        $string = str_replace("\t", '&nbsp;&nbsp;&nbsp;&nbsp;', $string);
+        return $string;
     }
 }
-

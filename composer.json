@@ -8,14 +8,12 @@
             "email": "panov.eo@gmail.com"
         }
     ],
-    "require": {},
-    "require-dev": {
-        "phpunit/phpunit": "^9"
-    },
     "autoload": {
         "classmap": [
             "src"
         ],
-        "files": ["src/functions.php"]
+        "files": [
+            "src/functions.php"
+        ]
     }
 }

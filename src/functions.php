@@ -1,9 +1,13 @@
 <?php
 
-if (!function_exists('dd')){
-    function dd($entity = null, $comment = '')
-    {
-        (new Faydaen\Dumper())->p($entity, $comment);
-        die();
-    }
+function dd($entity, $comment = '') {
+    $dumper = new \Faydaen\Dumper();
+    $dumper->dump($entity, $comment);
+    die();
+}
+
+function ll($entity, $comment = '') {
+    $dumper = new \Faydaen\Dumper();
+    $dumper->dump($entity, $comment);
+    echo '<hr>';
 }
