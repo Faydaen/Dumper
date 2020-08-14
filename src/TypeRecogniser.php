@@ -4,26 +4,26 @@ namespace Faydaen;
 
 class TypeRecogniser
 {
-    const TYPE_NULL = 'null';
-    const TYPE_INTEGER = 'integer';
-    const TYPE_DOUBLE = 'double';
-    const TYPE_STRING = 'string';
-    const TYPE_BOOL = 'bool';
-    const TYPE_ASSOCIATES_ARRAY = 'associates_array';
-    const TYPE_FLAT_ARRAY = 'flat_array';
-    const TYPE_EMPTY_ARRAY = 'empty_array';
-    const TYPE_YII_MODEL = 'yii_model';
-    const TYPE_QUERY_COMMAND = 'query_command';
-    const TYPE_QUERY = 'query';
-    const TYPE_OBJECT = 'object';
-    const TYPE_UNKNOWN = 'unknown';
+    public const TYPE_NULL = 'null';
+    public const TYPE_INTEGER = 'integer';
+    public const TYPE_DOUBLE = 'double';
+    public const TYPE_STRING = 'string';
+    public const TYPE_BOOL = 'bool';
+    public const TYPE_ASSOCIATES_ARRAY = 'associates_array';
+    public const TYPE_FLAT_ARRAY = 'flat_array';
+    public const TYPE_EMPTY_ARRAY = 'empty_array';
+    public const TYPE_YII_MODEL = 'yii_model';
+    public const TYPE_QUERY_COMMAND = 'query_command';
+    public const TYPE_QUERY = 'query';
+    public const TYPE_OBJECT = 'object';
+    public const TYPE_UNKNOWN = 'unknown';
 
     /**
      *
      * @param $entity
      * @return string
      */
-    public static function recognizeType($entity)
+    public static function recognizeType($entity) : string
     {
         if (is_null($entity)) {
             return self::TYPE_NULL;
@@ -76,7 +76,7 @@ class TypeRecogniser
         return self::TYPE_UNKNOWN;
     }
 
-    private static function isFlatArray($array)
+    private static function isFlatArray($array) : bool
     {
         return array_keys($array) === range(0, count($array) - 1);
     }

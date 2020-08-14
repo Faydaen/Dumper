@@ -4,8 +4,8 @@ namespace Faydaen;
 
 class Subline {
 
-    public $text;
-    public $color;
+    public string $text;
+    public ?string $color;
 
     public function __construct($text, $color = null)
     {

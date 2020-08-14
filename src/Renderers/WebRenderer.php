@@ -4,20 +4,21 @@
 namespace Faydaen\Renderers;
 
 use Faydaen\Line;
+use Faydaen\Subline;
 
-class WebRenderer
+class WebRenderer implements IRenderer
 {
     /**
      * @var Line[] $variables
      */
-    private $variables;
+    private array $variables;
 
-    private $comment;
+    private string $comment;
 
     /**
      * @var string[] $variables
      */
-    private $colors;
+    private array $colors;
 
     public function __construct($variables, $comment = '')
     {
@@ -37,7 +38,7 @@ class WebRenderer
         ];
     }
 
-    public function render()
+    public function render(): string
     {
         $result = '';
         $result .= $this->renderComment();
@@ -72,7 +73,7 @@ class WebRenderer
         return $result;
     }
 
-    private function colorPrint($subline){
+    private function colorPrint(?Subline $subline){
         $result = '';
         if (!is_null($subline)){
             $result .= $this->color_start($subline->color);

@@ -6,21 +6,21 @@ use Faydaen\Renderers\WebRenderer;
 
 class Dumper
 {
-    const CLASS_NAME_DEEP = 3;
+    const CLASS_NAME_DEEP = 2;
 
-    private $tabs = 0;
+    private int $tabs = 0;
 
-    private $value;
+    private ?Subline $value;
 
-    private $key = null;
+    private ?Subline $key = null;
 
-    private $separator = null;
+    private ?Subline $separator = null;
 
-    private $bracket = null;
+    private ?Subline $bracket = null;
 
-    private $signOnEnd = null;
+    private ?Subline $signOnEnd = null;
 
-    private $map = [];
+    private array $map = [];
     const ITERATION_TYPE_SCALAR = 'scalar';
     const ITERATION_TYPE_ARRAY = 'array';
     const ITERATION_TYPE_OBJECT = 'object';
@@ -28,7 +28,7 @@ class Dumper
     /**
      * @var Line[]
      */
-    private $lines;
+    private array $lines;
 
     public function dump($entity, $comment = '')
     {
@@ -86,28 +86,20 @@ class Dumper
         switch (TypeRecogniser::recognizeType($entity)) {
             case TypeRecogniser::TYPE_NULL:
                 return $this->createNullType();
-
             case TypeRecogniser::TYPE_INTEGER:
                 return $this->createIntegerType($entity);
-
             case TypeRecogniser::TYPE_DOUBLE:
                 return $this->createDoubleType($entity);
-
             case TypeRecogniser::TYPE_STRING:
                 return $this->createStringType($entity);
-
             case TypeRecogniser::TYPE_BOOL:
                 return $this->createBoolType($entity);
-
             case TypeRecogniser::TYPE_EMPTY_ARRAY:
                 return $this->createEmptyArrayType();
-
             case  TypeRecogniser::TYPE_QUERY_COMMAND:
                 return $this->createQueryCommandType($entity);
-
             case  TypeRecogniser::TYPE_QUERY:
                 return $this->createQueryType($entity);
-
             default:
                 return $this->createTypeName($entity);
         }
@@ -170,8 +162,8 @@ class Dumper
         $this->map[$this->tabs] = self::ITERATION_TYPE_OBJECT;
 
         $counter = 0;
-        foreach ($model->attributes() as $field) {
 
+        foreach ($model->attributes() as $field) {
             $counter++;
             $this->signOnEnd = new Subline(';');
             $this->separator = new Subline(' = ');
