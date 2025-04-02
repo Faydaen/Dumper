@@ -23,11 +23,11 @@ class Line {
     public function __construct
     (
         $tabs = 0,
-        Subline $key = null,
-        Subline $separator = null,
-        Subline $value = null,
-        Subline $bracket = null,
-        Subline $signOnEnd = null
+        ?Subline $key = null,
+        ?Subline $separator = null,
+        ?Subline $value = null,
+        ?Subline $bracket = null,
+        ?Subline $signOnEnd = null
     ) {
         $this->value = $value;
         $this->key = $key;

@@ -46,17 +46,19 @@ class WebRenderer implements IRenderer
         return $result;
     }
 
-    public function renderComment() {
+    public function renderComment(): string
+    {
         $comment = '';
-        if ($this->comment != ''){
-            $comment = '<b>'.$this->comment.'</b><br>';
+        if ($this->comment != '') {
+            $comment = '<b>' . $this->comment . '</b><br>';
         }
         return $comment;
     }
 
-    public function renderList(){
+    public function renderList(): string
+    {
         $result = '';
-        foreach ($this->variables as $variable){
+        foreach ($this->variables as $variable) {
 
             $result .= $this->tabs($variable->tabs);
 
@@ -73,39 +75,36 @@ class WebRenderer implements IRenderer
         return $result;
     }
 
-    private function colorPrint(?Subline $subline){
+    private function colorPrint(?Subline $subline): string
+    {
         $result = '';
-        if (!is_null($subline)){
-            $result .= $this->color_start($subline->color);
+        if (!is_null($subline)) {
+            $result .= $this->colorStart($subline->color);
             $result .= $subline->text;
-            $result .= $this->color_end($subline->color);
+            $result .= $this->colorEnd($subline->color);
         }
         return $result;
     }
 
-
-
-    private function color_start($color) {
-        if (is_null($color)){
+    private function colorStart($color): string
+    {
+        if (is_null($color)) {
             return '';
         }
-        $style = '"'.$this->colors[$color].'"';
+        $style = '"' . $this->colors[$color] . '"';
         return "<span style=$style>";
     }
 
-    private function color_end($color) {
-        if (is_null($color)){
+    private function colorEnd($color): string
+    {
+        if (is_null($color)) {
             return '';
         }
         return '</span>';
     }
 
-    private function tabs($tabsNum)
+    private function tabs($tabsNum): string
     {
-        $tabs = '';
-        for ($i = 0; $i < $tabsNum; $i++) {
-            $tabs .= '&nbsp;&nbsp;&nbsp;&nbsp;';
-        }
-        return $tabs;
+        return str_repeat('&nbsp;&nbsp;&nbsp;&nbsp;', $tabsNum);
     }
 }

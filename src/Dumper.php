@@ -53,20 +53,20 @@ class Dumper
                 case TypeRecogniser::TYPE_OBJECT:
                     if ($this->tabs < self::CLASS_NAME_DEEP) {
                         $this->createObjectType($entity);
-                    }
-                    else {
+                    } else {
                         $this->value = $this->createClassName($entity);
                         $this->putLine(self::ITERATION_TYPE_SCALAR);
                     }
                     break;
                 case TypeRecogniser::TYPE_YII_MODEL:
-                    $this->createObjectType($entity,true);
+                    $this->createObjectType($entity, true);
                     break;
             }
         }
     }
 
-    private function putLine($iterationType = null) {
+    private function putLine($iterationType = null)
+    {
         if (!is_null($iterationType)) {
             $this->map[$this->tabs] = $iterationType;
         }
@@ -81,7 +81,7 @@ class Dumper
         );
     }
 
-    private function getScalarType($entity)
+    private function getScalarType($entity): Subline
     {
         switch (TypeRecogniser::recognizeType($entity)) {
             case TypeRecogniser::TYPE_NULL:
@@ -105,15 +105,18 @@ class Dumper
         }
     }
 
-    private function createAssociatesArrayType($array) {
+    private function createAssociatesArrayType($array)
+    {
         $this->createArray($array, true);
     }
 
-    private function createFlatArrayType($array){
+    private function createFlatArrayType($array)
+    {
         $this->createArray($array, false);
     }
 
-    private function createObjectType($object,$isModel = false) {
+    private function createObjectType($object, $isModel = false)
+    {
         $this->value = $this->createClassName($object);
         $this->bracket = new Subline(' {');
         $this->signOnEnd = null;
@@ -142,13 +145,11 @@ class Dumper
         $this->tabs++;
         $this->map[$this->tabs] = self::ITERATION_TYPE_OBJECT;
 
-        $counter = 0;
         foreach ($object as $key => $value) {
 
-            $counter++;
             $this->signOnEnd = new Subline(';');
             $this->separator = new Subline(' = ');
-            $this->key = new Subline('$' . $key );
+            $this->key = new Subline('$' . $key);
 
             $this->putValue($value);
 
@@ -161,13 +162,11 @@ class Dumper
         $this->tabs++;
         $this->map[$this->tabs] = self::ITERATION_TYPE_OBJECT;
 
-        $counter = 0;
 
         foreach ($model->attributes() as $field) {
-            $counter++;
             $this->signOnEnd = new Subline(';');
             $this->separator = new Subline(' = ');
-            $this->key = new Subline('$' . $field );
+            $this->key = new Subline('$' . $field);
 
             $this->putValue($model->{$field});
 
@@ -175,7 +174,8 @@ class Dumper
         $this->tabs--;
     }
 
-    private function createArray($array, $isAssociative) {
+    private function createArray($array, $isAssociative)
+    {
         $this->value = null;
         $this->bracket = new Subline('[');
         $this->signOnEnd = null;
@@ -194,24 +194,26 @@ class Dumper
         $this->bracket = null;
     }
 
-    private function getFinaleSeparator() {
-        if ($this->tabs == 0){
+    private function getFinaleSeparator(): ?Subline
+    {
+        if ($this->tabs == 0) {
             return new Subline(';');
         }
-        if($this->map[$this->tabs-1] == self::ITERATION_TYPE_ARRAY){
+        if ($this->map[$this->tabs - 1] == self::ITERATION_TYPE_ARRAY) {
             return new Subline(',');
         }
-        if($this->map[$this->tabs-1] == self::ITERATION_TYPE_OBJECT){
+        if ($this->map[$this->tabs - 1] == self::ITERATION_TYPE_OBJECT) {
             return new Subline(';');
         }
         return null;
     }
 
-    private function arrayIteration($array, $isAssociative){
+    private function arrayIteration($array, $isAssociative)
+    {
         $this->tabs++;
         $this->map[$this->tabs] = self::ITERATION_TYPE_ARRAY;
 
-        if (!$isAssociative){
+        if (!$isAssociative) {
             $this->separator = null;
             $this->key = null;
         }
@@ -221,62 +223,73 @@ class Dumper
         foreach ($array as $key => $value) {
             $counter++;
 
-            if ($isAssociative){
+            if ($isAssociative) {
                 $this->separator = new Subline(' => ');
                 $this->key = $this->getScalarType($key);
             }
-            $this->signOnEnd = ($total!=$counter) ? new Subline(',') : null;
+            $this->signOnEnd = ($total != $counter) ? new Subline(',') : null;
             $this->putValue($value);
         }
 
         $this->tabs--;
     }
 
-    private function createNullType() {
+    private function createNullType(): Subline
+    {
         return new Subline('null', Line::COLOR_NULL);
     }
 
-    private function createEmptyArrayType() {
+    private function createEmptyArrayType(): Subline
+    {
         return new Subline('[ ]', Line::COLOR_DEFAULT);
     }
 
-    private function createIntegerType($entity) {
+    private function createIntegerType($entity): Subline
+    {
         return new Subline($entity, Line::COLOR_NUMERIC);
     }
 
-    private function createDoubleType($entity) {
+    private function createDoubleType($entity): Subline
+    {
         return new Subline($entity . 'f', Line::COLOR_NUMERIC);
     }
 
-    private function createStringType($entity) {
+    private function createStringType($entity): Subline
+    {
         $this->escapeQuotes($entity);
         return new Subline("'" . $entity . "'", Line::COLOR_STRING);
     }
 
-    private function createBoolType($entity) {
+    private function createBoolType($entity): Subline
+    {
         $bool = $entity ? 'true' : 'false';
         return new Subline($bool, Line::COLOR_BOOL);
     }
 
-    private function createQueryCommandType($entity) {
+    private function createQueryCommandType($entity): Subline
+    {
         $query = $entity->getRawSql();
         return new Subline($query, Line::COLOR_SQL);
     }
 
-    private function createQueryType($entity) {
+    private function createQueryType($entity): Subline
+    {
         $query = $entity->createCommand();
         return $this->createQueryCommandType($query);
     }
 
-    private function createClassName($entity) {
-        return new Subline(get_class($entity).'::class', Line::COLOR_CLASS_NAME);
+    private function createClassName($entity): Subline
+    {
+        return new Subline(get_class($entity) . '::class', Line::COLOR_CLASS_NAME);
     }
 
-    private function createTypeName($entity) {
+    private function createTypeName($entity): Subline
+    {
         return new Subline(gettype($entity), Line::COLOR_UNKNOWN_TYPE);
     }
 
-    private function isScalar($entity) {
+    private function isScalar($entity): bool
+    {
         return in_array(TypeRecogniser::recognizeType($entity), [
             TypeRecogniser::TYPE_NULL,
             TypeRecogniser::TYPE_INTEGER,
@@ -290,9 +303,9 @@ class Dumper
         ]);
     }
 
-    private function escapeQuotes($string){
+    private function escapeQuotes(&$string): void
+    {
         $string = str_replace(' ', '&nbsp;', $string);
         $string = str_replace("\t", '&nbsp;&nbsp;&nbsp;&nbsp;', $string);
-        return $string;
     }
 }
